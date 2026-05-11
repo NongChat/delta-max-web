@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delta Max — Math & Physics ม.ปลาย</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700;900&family=Sarabun:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080C12;
+  --bg2: #0D1117;
+  --bg3: #111820;
+  --card: #141C26;
+  --card2: #1A2333;
+  --gold: #C9963A;
+  --gold2: #E8B84B;
+  --gold-dim: rgba(201,150,58,0.15);
+  --gold-border: rgba(201,150,58,0.3);
+  --blue: #1E6FD9;
+  --blue-dim: rgba(30,111,217,0.12);
+  --white: #FFFFFF;
+  --text: #E8E4DC;
+  --text2: #8A8F9A;
+  --text3: #4A5060;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.1);
+  --radius: 16px;
+  --radius-sm: 8px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Sarabun', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* NOISE TEXTURE OVERLAY */
+body::before {
+  content:'';
+  position:fixed; inset:0; z-index:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events:none;
+}
+
+/* NAV */
+nav {
+  position: fixed; top:0; left:0; right:0; z-index:100;
+  padding: 1.25rem 3rem;
+  display: flex; align-items:center; justify-content:space-between;
+  background: rgba(8,12,18,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
+.logo-mark {
+  width:38px; height:38px; border-radius:10px;
+  background: linear-gradient(135deg, var(--gold), #A07020);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Playfair Display', serif; font-size:20px; font-weight:900; color:var(--bg);
+}
+.logo-text { font-family:'Playfair Display', serif; font-size:18px; font-weight:700; color:var(--white); }
+.logo-sub { font-size:10px; color:var(--gold); letter-spacing:0.15em; text-transform:uppercase; margin-top:1px; }
+
+.nav-links { display:flex; align-items:center; gap:2.5rem; }
+.nav-links a { text-decoration:none; font-size:14px; color:var(--text2); transition:color 0.2s; letter-spacing:0.02em; }
+.nav-links a:hover { color:var(--gold); }
+.nav-cta {
+  background: transparent; border:1px solid var(--gold-border);
+  color:var(--gold); padding:9px 22px; border-radius:99px;
+  font-size:14px; font-weight:500; text-decoration:none;
+  transition:all 0.2s; font-family:'Sarabun', sans-serif;
+}
+.nav-cta:hover { background:var(--gold); color:var(--bg); }
+.hamburger { display:none; flex-direction:column; gap:5px; cursor:pointer; padding:4px; }
+.hamburger span { display:block; width:22px; height:1.5px; background:var(--text); }
+
+/* HERO */
+.hero {
+  min-height:100vh; display:flex; align-items:center;
+  padding: 8rem 3rem 4rem;
+  position:relative; overflow:hidden;
+}
+.hero-grid-bg {
+  position:absolute; inset:0; z-index:0;
+  background-image:
+    linear-gradient(rgba(201,150,58,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201,150,58,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+.hero-glow {
+  position:absolute; border-radius:50%; filter:blur(120px); z-index:0;
+}
+.hero-glow-1 { width:600px; height:600px; background:rgba(201,150,58,0.08); top:-200px; right:-100px; }
+.hero-glow-2 { width:400px; height:400px; background:rgba(30,111,217,0.06); bottom:0; left:-100px; }
+
+.hero-inner { max-width:1200px; margin:0 auto; width:100%; position:relative; z-index:1; display:grid; grid-template-columns:1fr 1fr; gap:5rem; align-items:center; }
+
+.hero-eyebrow {
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:'Space Mono', monospace; font-size:11px; letter-spacing:0.15em;
+  color:var(--gold); text-transform:uppercase;
+  margin-bottom:1.5rem;
+}
+.eyebrow-line { width:30px; height:1px; background:var(--gold); }
+
+.hero h1 {
+  font-family:'Playfair Display', serif;
+  font-size: clamp(3rem, 5vw, 4.5rem);
+  font-weight:900; line-height:1.05;
+  color:var(--white); margin-bottom:1.5rem;
+}
+.hero h1 em { color:var(--gold); font-style:normal; }
+
+.hero-desc { font-size:17px; color:var(--text2); line-height:1.8; margin-bottom:2.5rem; max-width:500px; }
+
+.hero-btns { display:flex; gap:12px; flex-wrap:wrap; }
+.btn-gold {
+  background:var(--gold); color:var(--bg);
+  padding:14px 32px; border-radius:99px;
+  font-size:15px; font-weight:600; text-decoration:none;
+  transition:all 0.2s; font-family:'Sarabun', sans-serif;
+  border:none; cursor:pointer;
+}
+.btn-gold:hover { background:var(--gold2); transform:translateY(-1px); }
+.btn-ghost {
+  background:transparent; color:var(--text);
+  padding:14px 32px; border-radius:99px;
+  font-size:15px; font-weight:500; text-decoration:none;
+  border:1px solid var(--border2); transition:all 0.2s;
+}
+.btn-ghost:hover { border-color:var(--gold-border); color:var(--gold); }
+
+.hero-stats { display:flex; gap:2.5rem; margin-top:3rem; padding-top:2.5rem; border-top:1px solid var(--border); }
+.hero-stat-num { font-family:'Playfair Display', serif; font-size:28px; font-weight:700; color:var(--white); }
+.hero-stat-label { font-size:12px; color:var(--text3); margin-top:2px; }
+
+/* HERO CARD */
+.hero-card {
+  background:var(--card); border:1px solid var(--border2);
+  border-radius:24px; padding:2rem; position:relative; overflow:hidden;
+}
+.hero-card::before {
+  content:'Δ'; position:absolute; right:-20px; bottom:-30px;
+  font-family:'Playfair Display', serif; font-size:180px; font-weight:900;
+  color:rgba(201,150,58,0.04); line-height:1; pointer-events:none;
+}
+.card-top { display:flex; align-items:center; gap:12px; margin-bottom:1.5rem; }
+.card-avatar {
+  width:52px; height:52px; border-radius:14px;
+  background:linear-gradient(135deg, var(--gold), #7A5010);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Playfair Display', serif; font-size:22px; font-weight:900; color:var(--bg);
+}
+.card-name { font-family:'Playfair Display', serif; font-size:18px; font-weight:700; color:var(--white); }
+.card-role { font-size:12px; color:var(--text2); margin-top:2px; }
+
+.subject-chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1.5rem; }
+.chip {
+  padding:5px 14px; border-radius:99px; font-size:12px; font-weight:500;
+  border:1px solid;
+}
+.chip-math { background:var(--blue-dim); border-color:rgba(30,111,217,0.3); color:#85B7EB; }
+.chip-physics { background:var(--gold-dim); border-color:var(--gold-border); color:var(--gold); }
+.chip-grade { background:rgba(255,255,255,0.04); border-color:var(--border2); color:var(--text2); }
+
+.mini-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.mini-card {
+  background:var(--card2); border-radius:var(--radius-sm);
+  padding:12px; text-align:center; border:1px solid var(--border);
+}
+.mini-num { font-family:'Playfair Display', serif; font-size:20px; font-weight:700; color:var(--gold); }
+.mini-label { font-size:11px; color:var(--text3); margin-top:2px; }
+
+/* SECTIONS */
+section { padding:6rem 3rem; position:relative; z-index:1; }
+.section-inner { max-width:1200px; margin:0 auto; }
+.section-tag {
+  font-family:'Space Mono', monospace; font-size:11px; letter-spacing:0.15em;
+  color:var(--gold); text-transform:uppercase;
+  display:flex; align-items:center; gap:10px; margin-bottom:1rem;
+}
+.section-tag::before { content:''; width:24px; height:1px; background:var(--gold); }
+.section-title {
+  font-family:'Playfair Display', serif;
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  font-weight:700; color:var(--white); line-height:1.2; margin-bottom:1rem;
+}
+.section-sub { font-size:16px; color:var(--text2); line-height:1.8; max-width:560px; }
+
+/* ABOUT */
+.about-section { background:var(--bg2); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+.about-grid { display:grid; grid-template-columns:1fr 1fr; gap:5rem; align-items:center; margin-top:4rem; }
+.about-img {
+  background:var(--card); border:1px solid var(--border2); border-radius:24px;
+  aspect-ratio:4/5; display:flex; align-items:center; justify-content:center;
+  position:relative; overflow:hidden;
+}
+.about-img-placeholder {
+  font-family:'Playfair Display', serif; font-size:120px; font-weight:900;
+  color:var(--gold-dim); position:absolute;
+}
+.about-img-label {
+  position:absolute; bottom:1.5rem; left:1.5rem; right:1.5rem;
+  background:rgba(8,12,18,0.85); border:1px solid var(--border2);
+  border-radius:var(--radius-sm); padding:12px 16px; backdrop-filter:blur(10px);
+}
+.about-img-name { font-family:'Playfair Display', serif; font-size:16px; font-weight:700; color:var(--white); }
+.about-img-role { font-size:12px; color:var(--gold); margin-top:2px; }
+
+.about-points { display:flex; flex-direction:column; gap:1.5rem; margin-top:2rem; }
+.about-point { display:flex; gap:1rem; align-items:flex-start; }
+.point-icon {
+  width:40px; height:40px; border-radius:10px; flex-shrink:0;
+  border:1px solid var(--gold-border); background:var(--gold-dim);
+  display:flex; align-items:center; justify-content:center; font-size:18px;
+}
+.point-title { font-size:15px; font-weight:500; color:var(--white); margin-bottom:4px; }
+.point-desc { font-size:13px; color:var(--text2); line-height:1.6; }
+
+/* WHY */
+.why-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1.25rem; margin-top:4rem; }
+.why-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:1.75rem;
+  transition:all 0.3s; position:relative; overflow:hidden;
+}
+.why-card::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg, var(--gold-dim), transparent);
+  opacity:0; transition:opacity 0.3s;
+}
+.why-card:hover { border-color:var(--gold-border); transform:translateY(-4px); }
+.why-card:hover::before { opacity:1; }
+.why-num {
+  font-family:'Space Mono', monospace; font-size:11px;
+  color:var(--text3); margin-bottom:1rem; letter-spacing:0.1em;
+}
+.why-icon { font-size:28px; margin-bottom:1rem; }
+.why-title { font-family:'Playfair Display', serif; font-size:18px; font-weight:700; color:var(--white); margin-bottom:8px; }
+.why-desc { font-size:13px; color:var(--text2); line-height:1.7; }
+
+/* PACKAGES */
+.pkg-section { background:var(--bg2); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+.pkg-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1.25rem; margin-top:4rem; }
+.pkg-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:1.75rem; position:relative;
+  transition:all 0.3s;
+}
+.pkg-card:hover { border-color:var(--border2); transform:translateY(-4px); }
+.pkg-card.featured { border-color:var(--gold-border); background:linear-gradient(135deg, var(--card), #1A1A10); }
+.featured-badge {
+  position:absolute; top:-1px; left:50%; transform:translateX(-50%);
+  background:var(--gold); color:var(--bg); font-size:11px; font-weight:700;
+  padding:4px 16px; border-radius:0 0 10px 10px; white-space:nowrap;
+  font-family:'Space Mono', monospace; letter-spacing:0.05em;
+}
+.pkg-icon { font-size:28px; margin-bottom:1rem; }
+.pkg-name { font-family:'Playfair Display', serif; font-size:18px; font-weight:700; color:var(--white); margin-bottom:4px; }
+.pkg-tagline { font-size:12px; color:var(--text2); margin-bottom:1.25rem; }
+.pkg-price { font-family:'Playfair Display', serif; font-size:36px; font-weight:900; color:var(--gold); margin-bottom:4px; }
+.pkg-price-unit { font-size:12px; color:var(--text3); margin-bottom:1.5rem; }
+.pkg-features { list-style:none; margin-bottom:1.75rem; }
+.pkg-features li {
+  font-size:13px; color:var(--text2); padding:6px 0;
+  display:flex; gap:8px; align-items:flex-start;
+  border-bottom:1px solid var(--border);
+}
+.pkg-features li:last-child { border-bottom:none; }
+.pkg-features li::before { content:'—'; color:var(--gold); flex-shrink:0; font-size:12px; margin-top:1px; }
+.pkg-btn {
+  display:block; text-align:center; padding:12px;
+  border-radius:99px; font-size:14px; font-weight:500;
+  text-decoration:none; transition:all 0.2s; cursor:pointer;
+  border:1px solid var(--gold-border); color:var(--gold); background:transparent;
+  width:100%; font-family:'Sarabun', sans-serif;
+}
+.pkg-btn:hover { background:var(--gold-dim); }
+.pkg-card.featured .pkg-btn { background:var(--gold); color:var(--bg); border-color:var(--gold); }
+.pkg-card.featured .pkg-btn:hover { background:var(--gold2); }
+
+/* TESTIMONIALS */
+.test-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:1.25rem; margin-top:4rem; }
+.test-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:1.75rem;
+}
+.test-stars { color:var(--gold); font-size:14px; letter-spacing:3px; margin-bottom:1rem; }
+.test-quote {
+  font-size:14px; color:var(--text); line-height:1.8;
+  margin-bottom:1.25rem; font-style:italic;
+  border-left:2px solid var(--gold-border); padding-left:1rem;
+}
+.test-author { display:flex; align-items:center; gap:10px; }
+.test-avatar {
+  width:36px; height:36px; border-radius:99px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:600; color:var(--bg);
+}
+.test-name { font-size:13px; font-weight:500; color:var(--white); }
+.test-grade { font-size:11px; color:var(--text3); }
+
+/* CONTACT / BOOKING */
+.contact-section { background:var(--bg); }
+.contact-grid { display:grid; grid-template-columns:1fr 1fr; gap:5rem; margin-top:4rem; align-items:start; }
+.contact-info { }
+.contact-chips { display:flex; flex-direction:column; gap:12px; margin-top:2rem; }
+.contact-chip {
+  display:flex; align-items:center; gap:14px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:14px 18px;
+  transition:border-color 0.2s;
+}
+.contact-chip:hover { border-color:var(--gold-border); }
+.chip-icon {
+  width:38px; height:38px; border-radius:10px; background:var(--gold-dim);
+  border:1px solid var(--gold-border); display:flex; align-items:center;
+  justify-content:center; font-size:16px; flex-shrink:0;
+}
+.chip-label { font-size:13px; font-weight:500; color:var(--white); }
+.chip-val { font-size:12px; color:var(--text2); margin-top:2px; }
+
+.booking-form {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:2rem;
+}
+.form-title { font-family:'Playfair Display', serif; font-size:22px; font-weight:700; color:var(--white); margin-bottom:1.5rem; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-group { margin-bottom:1rem; }
+.form-group label { display:block; font-size:12px; font-weight:500; color:var(--text2); margin-bottom:6px; letter-spacing:0.05em; text-transform:uppercase; }
+.form-group input, .form-group select, .form-group textarea {
+  width:100%; padding:11px 14px;
+  background:var(--bg3); border:1px solid var(--border2);
+  border-radius:var(--radius-sm); font-size:14px; font-family:'Sarabun', sans-serif;
+  color:var(--text); outline:none; transition:border-color 0.2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:var(--gold-border); }
+.form-group input::placeholder, .form-group textarea::placeholder { color:var(--text3); }
+.form-group select option { background:var(--card); }
+.form-group textarea { height:90px; resize:vertical; }
+.form-submit {
+  width:100%; padding:14px; border-radius:99px;
+  background:var(--gold); color:var(--bg); font-size:15px; font-weight:600;
+  border:none; cursor:pointer; font-family:'Sarabun', sans-serif;
+  transition:all 0.2s; margin-top:0.5rem;
+}
+.form-submit:hover { background:var(--gold2); }
+.form-note { text-align:center; font-size:12px; color:var(--text3); margin-top:10px; }
+.form-success { display:none; text-align:center; padding:2rem; }
+.form-success.show { display:block; }
+.success-icon { font-size:48px; margin-bottom:1rem; }
+.success-title { font-family:'Playfair Display', serif; font-size:22px; color:var(--white); margin-bottom:8px; }
+.success-sub { font-size:14px; color:var(--text2); }
+
+/* FOOTER */
+footer {
+  background:var(--bg2); border-top:1px solid var(--border);
+  padding:3rem; text-align:center;
+}
+.footer-logo { font-family:'Playfair Display', serif; font-size:22px; font-weight:700; color:var(--white); margin-bottom:6px; }
+.footer-logo span { color:var(--gold); }
+.footer-sub { font-size:13px; color:var(--text3); margin-bottom:1.5rem; }
+.footer-links { display:flex; justify-content:center; gap:2rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+.footer-links a { font-size:13px; color:var(--text2); text-decoration:none; transition:color 0.2s; }
+.footer-links a:hover { color:var(--gold); }
+.footer-copy { font-size:12px; color:var(--text3); }
+
+/* ANIMATIONS */
+@keyframes fadeUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+.fade-up { animation:fadeUp 0.7s ease both; }
+.fade-up-1 { animation-delay:0.1s; }
+.fade-up-2 { animation-delay:0.2s; }
+.fade-up-3 { animation-delay:0.3s; }
+.fade-up-4 { animation-delay:0.4s; }
+
+/* SCROLL REVEAL */
+.reveal { opacity:0; transform:translateY(24px); transition:all 0.6s ease; }
+.reveal.visible { opacity:1; transform:translateY(0); }
+
+/* MOBILE */
+@media (max-width: 768px) {
+  nav { padding:1rem; }
+  .nav-links { display:none; }
+  .hamburger { display:flex; }
+  .nav-mobile-open .nav-links {
+    display:flex; flex-direction:column;
+    position:fixed; top:65px; left:0; right:0;
+    background:var(--bg2); padding:1.5rem;
+    border-bottom:1px solid var(--border);
+    gap:1.25rem; z-index:99;
+  }
+  section { padding:4rem 1.25rem; }
+  .hero { padding:7rem 1.25rem 3rem; }
+  .hero-inner { grid-template-columns:1fr; gap:2rem; }
+  .hero-card { display:none; }
+  .about-grid, .contact-grid { grid-template-columns:1fr; gap:2rem; }
+  .form-row { grid-template-columns:1fr; }
+  .hero-stats { gap:1.5rem; flex-wrap:wrap; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="navbar">
+  <a href="#" class="nav-logo">
+    <div class="logo-mark">Δ</div>
+    <div>
+      <div class="logo-text">Delta Max</div>
+      <div class="logo-sub">Math & Physics</div>
+    </div>
+  </a>
+  <div class="nav-links">
+    <a href="#about">เกี่ยวกับเรา</a>
+    <a href="#why">ทำไมต้องเรา</a>
+    <a href="#packages">แพ็กเกจ</a>
+    <a href="#reviews">รีวิว</a>
+    <a href="#contact" class="nav-cta">จองเลย</a>
+  </div>
+  <div class="hamburger" onclick="document.getElementById('navbar').classList.toggle('nav-mobile-open')">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="hero-glow hero-glow-1"></div>
+  <div class="hero-glow hero-glow-2"></div>
+  <div class="hero-inner">
+    <div>
+      <div class="hero-eyebrow fade-up"><span class="eyebrow-line"></span> ติวเตอร์ Math & Physics ม.ปลาย</div>
+      <h1 class="fade-up fade-up-1">เปลี่ยนทุกแต้ม<br>สู่ <em>คะแนนสูงสุด</em></h1>
+      <p class="hero-desc fade-up fade-up-2">สอนสนุก เข้าใจจริง ไม่ใช่แค่ท่องสูตร ด้วยวิธีการสอนที่อธิบาย WHY ก่อน HOW ทำให้นักเรียนเข้าใจและจำได้นาน</p>
+      <div class="hero-btns fade-up fade-up-3">
+        <a href="#contact" class="btn-gold">ทดลองเรียนฟรี 1 ชม.</a>
+        <a href="#packages" class="btn-ghost">ดูแพ็กเกจ</a>
+      </div>
+      <div class="hero-stats fade-up fade-up-4">
+        <div>
+          <div class="hero-stat-num">20+</div>
+          <div class="hero-stat-label">นักเรียนที่ผ่านมา</div>
+        </div>
+        <div>
+          <div class="hero-stat-num">2</div>
+          <div class="hero-stat-label">วิชา Math + Physics</div>
+        </div>
+        <div>
+          <div class="hero-stat-num">ฟรี</div>
+          <div class="hero-stat-label">ทดลองเรียน 1 ชม.</div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-card fade-up fade-up-2">
+      <div class="card-top">
+        <div class="card-avatar">M</div>
+        <div>
+          <div class="card-name">ครู Max</div>
+          <div class="card-role">Delta Max — Math & Physics Tutor</div>
+        </div>
+      </div>
+      <div class="subject-chips">
+        <span class="chip chip-math">📐 Mathematics</span>
+        <span class="chip chip-physics">⚡ Physics</span>
+        <span class="chip chip-grade">ม.4 — ม.6</span>
+      </div>
+      <div class="mini-grid">
+        <div class="mini-card"><div class="mini-num">700฿</div><div class="mini-label">ต่อชั่วโมง</div></div>
+        <div class="mini-card"><div class="mini-num">Online</div><div class="mini-label">& Onsite</div></div>
+        <div class="mini-card"><div class="mini-num">1-on-1</div><div class="mini-label">& กลุ่มเล็ก</div></div>
+        <div class="mini-card"><div class="mini-num" style="color:var(--gold)">Free</div><div class="mini-label">ทดลองเรียน</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="about-section" id="about">
+  <div class="section-inner">
+    <div class="section-tag reveal">เกี่ยวกับครู Max</div>
+    <h2 class="section-title reveal">สอนโดยครูที่<br>เข้าใจนักเรียนจริงๆ</h2>
+    <div class="about-grid">
+      <div class="about-img reveal">
+        <div class="about-img-placeholder">Δ</div>
+        <div class="about-img-label">
+          <div class="about-img-name">ครู Max</div>
+          <div class="about-img-role">Math & Physics · Delta Max</div>
+        </div>
+      </div>
+      <div class="reveal">
+        <p class="section-sub">ครู Max เชื่อว่าทุกคนเก่ง Math และ Physics ได้ ถ้าเข้าใจถูกต้องตั้งแต่แรก ไม่ใช่แค่ท่องสูตรแล้วลืม</p>
+        <div class="about-points">
+          <div class="about-point">
+            <div class="point-icon">⚡</div>
+            <div>
+              <div class="point-title">สอนสนุก มีพลังงาน</div>
+              <div class="point-desc">การเรียนที่ดีต้องไม่น่าเบื่อ ครู Max ใช้พลังงานและความสนุกในทุก session ทำให้นักเรียนอยากเรียนต่อ</div>
+            </div>
+          </div>
+          <div class="about-point">
+            <div class="point-icon">💡</div>
+            <div>
+              <div class="point-title">อธิบาย WHY ก่อน HOW</div>
+              <div class="point-desc">ไม่สอนแค่วิธีทำ แต่อธิบายว่าทำไมสูตรถึงเป็นแบบนี้ เมื่อเข้าใจ WHY แล้ว ทำข้อสอบรูปแบบไหนก็ได้</div>
+            </div>
+          </div>
+          <div class="about-point">
+            <div class="point-icon">🎯</div>
+            <div>
+              <div class="point-title">เน้นผลลัพธ์จริง</div>
+              <div class="point-desc">ทุก session มีเป้าหมายชัดเจน ติดตามความก้าวหน้า และปรับวิธีสอนให้เหมาะกับนักเรียนแต่ละคน</div>
+            </div>
+          </div>
+          <div class="about-point">
+            <div class="point-icon">📚</div>
+            <div>
+              <div class="point-title">สอน 2 วิชาในครูคนเดียว</div>
+              <div class="point-desc">Math + Physics ในครูเดียวกัน ประหยัดเวลาและเงิน พร้อมเชื่อมโยงทั้งสองวิชาให้เห็นภาพรวม</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section id="why">
+  <div class="section-inner">
+    <div class="section-tag reveal">ทำไมต้อง Delta Max</div>
+    <h2 class="section-title reveal">สิ่งที่ทำให้เรา<br>แตกต่างจากคนอื่น</h2>
+    <div class="why-grid">
+      <div class="why-card reveal">
+        <div class="why-num">01</div>
+        <div class="why-icon">🔺</div>
+        <div class="why-title">Delta = การเปลี่ยนแปลง</div>
+        <div class="why-desc">เราไม่ได้แค่สอน แต่เปลี่ยนนักเรียนจากคนที่กลัว Math กลายเป็นคนที่ทำได้จริง นั่นคือ Delta ที่แท้จริง</div>
+      </div>
+      <div class="why-card reveal">
+        <div class="why-num">02</div>
+        <div class="why-icon">⚡</div>
+        <div class="why-title">พลังงานทุก Session</div>
+        <div class="why-desc">ครูที่สอนสนุกสร้างนักเรียนที่อยากเรียน ทุก session ของครู Max ออกแบบให้มีพลังงานและความสนุกตลอด</div>
+      </div>
+      <div class="why-card reveal">
+        <div class="why-num">03</div>
+        <div class="why-icon">🧠</div>
+        <div class="why-title">เข้าใจจริง ไม่ใช่ท่องจำ</div>
+        <div class="why-desc">การท่องสูตรทำให้ทำข้อสอบเดิมได้ แต่การเข้าใจทำให้ทำได้ทุกข้อ เราเน้นความเข้าใจที่แท้จริง</div>
+      </div>
+      <div class="why-card reveal">
+        <div class="why-num">04</div>
+        <div class="why-icon">📊</div>
+        <div class="why-title">ติดตามผลทุก Session</div>
+        <div class="why-desc">มีการ track ความก้าวหน้าของนักเรียนทุกสัปดาห์ เพื่อให้มั่นใจว่าคะแนนดีขึ้นจริงๆ</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PACKAGES -->
+<section class="pkg-section" id="packages">
+  <div class="section-inner">
+    <div class="section-tag reveal">แพ็กเกจและราคา</div>
+    <h2 class="section-title reveal">เลือกแพ็กเกจ<br>ที่เหมาะกับคุณ</h2>
+    <p class="section-sub reveal">ทุกแพ็กเกจเริ่มต้นด้วยการทดลองเรียนฟรี 1 ชั่วโมง ไม่มีข้อผูกมัด</p>
+    <div class="pkg-grid">
+      <div class="pkg-card reveal">
+        <div class="pkg-icon">🎁</div>
+        <div class="pkg-name">ทดลองเรียน</div>
+        <div class="pkg-tagline">สำหรับนักเรียนใหม่</div>
+        <div class="pkg-price" style="color:#5DCAA5">ฟรี</div>
+        <div class="pkg-price-unit">1 ชั่วโมง · ครั้งเดียว</div>
+        <ul class="pkg-features">
+          <li>เรียน Math หรือ Physics</li>
+          <li>ประเมินระดับความรู้</li>
+          <li>Online หรือ Onsite</li>
+          <li>ไม่มีข้อผูกมัด</li>
+        </ul>
+        <a href="#contact" class="pkg-btn">จองเลย</a>
+      </div>
+      <div class="pkg-card reveal">
+        <div class="pkg-icon">👤</div>
+        <div class="pkg-name">1-on-1 รายครั้ง</div>
+        <div class="pkg-tagline">ความสนใจเต็ม 100%</div>
+        <div class="pkg-price">700฿</div>
+        <div class="pkg-price-unit">ต่อชั่วโมง · จ่ายรายครั้ง</div>
+        <ul class="pkg-features">
+          <li>Math + Physics ได้ทั้งคู่</li>
+          <li>ตารางเรียนยืดหยุ่น</li>
+          <li>Online หรือ Onsite</li>
+          <li>ช่วย Homework ได้</li>
+        </ul>
+        <a href="#contact" class="pkg-btn">จองเลย</a>
+      </div>
+      <div class="pkg-card featured reveal">
+        <div class="featured-badge">⭐ แนะนำมากที่สุด</div>
+        <div class="pkg-icon">📦</div>
+        <div class="pkg-name">แพ็กเกจรายเดือน</div>
+        <div class="pkg-tagline">คุ้มที่สุด สำหรับนักเรียนประจำ</div>
+        <div class="pkg-price">5,500฿</div>
+        <div class="pkg-price-unit">8 ครั้ง/เดือน · ประหยัด 1,100฿</div>
+        <ul class="pkg-features">
+          <li>8 × 1 ชม. ต่อเดือน</li>
+          <li>Math + Physics รวมได้</li>
+          <li>ติดตามความก้าวหน้า</li>
+          <li>Line Q&A ระหว่างคาบ</li>
+          <li>เอกสารสรุปและข้อสอบ</li>
+        </ul>
+        <a href="#contact" class="pkg-btn">เลือกแพ็กเกจนี้</a>
+      </div>
+      <div class="pkg-card reveal">
+        <div class="pkg-icon">👥</div>
+        <div class="pkg-name">กลุ่มเล็ก</div>
+        <div class="pkg-tagline">3–5 คน ต่อกลุ่ม</div>
+        <div class="pkg-price">280฿</div>
+        <div class="pkg-price-unit">ต่อคน/ชั่วโมง</div>
+        <ul class="pkg-features">
+          <li>Math หรือ Physics</li>
+          <li>ตารางประจำทุกสัปดาห์</li>
+          <li>เหมาะสำหรับกลุ่มเพื่อน</li>
+          <li>Online เป็นหลัก</li>
+        </ul>
+        <a href="#contact" class="pkg-btn">จองเลย</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section id="reviews">
+  <div class="section-inner">
+    <div class="section-tag reveal">รีวิวจากนักเรียนจริง</div>
+    <h2 class="section-title reveal">นักเรียนพูดถึง<br>ครู Max ว่าอะไร</h2>
+    <div class="test-grid">
+      <div class="test-card reveal">
+        <div class="test-stars">★★★★★</div>
+        <div class="test-quote">"ก่อนเรียนกับครู Max หนูไม่เคยได้เกิน 50 คะแนนเลย พอเข้าใจว่าทำไมสูตรถึงเป็นแบบนี้ มันเริ่ม click เลย ตอนนี้ได้ 78 แล้ว!"</div>
+        <div class="test-author">
+          <div class="test-avatar" style="background:var(--blue)">ป</div>
+          <div>
+            <div class="test-name">น้องปลา</div>
+            <div class="test-grade">นักเรียน ม.5</div>
+          </div>
+        </div>
+      </div>
+      <div class="test-card reveal">
+        <div class="test-stars">★★★★★</div>
+        <div class="test-quote">"สอนสนุกมากกก ครูอธิบายเป็น step ชัดเจน ทำให้ Physics ที่เคยกลัวมาก ตอนนี้กลายเป็นวิชาโปรดแล้ว"</div>
+        <div class="test-author">
+          <div class="test-avatar" style="background:var(--teal)">ต</div>
+          <div>
+            <div class="test-name">น้องต้น</div>
+            <div class="test-grade">นักเรียน ม.4</div>
+          </div>
+        </div>
+      </div>
+      <div class="test-card reveal">
+        <div class="test-stars">★★★★★</div>
+        <div class="test-quote">"ลูกชายเรียนกับครู Max ได้ 2 เดือน คะแนน Math จาก 45 ขึ้นมาเป็น 72 พอใจมากค่ะ ครูใจดี อธิบายชัด"</div>
+        <div class="test-author">
+          <div class="test-avatar" style="background:var(--gold)">ม</div>
+          <div>
+            <div class="test-name">คุณแม่น้องมาร์ค</div>
+            <div class="test-grade">ผู้ปกครอง นักเรียน ม.6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="contact-section" id="contact">
+  <div class="section-inner">
+    <div class="section-tag reveal">ติดต่อและจองเลย</div>
+    <h2 class="section-title reveal">พร้อมเริ่มเรียน<br>แล้วใช่ไหม?</h2>
+    <div class="contact-grid">
+      <div class="reveal">
+        <p class="section-sub">กรอกฟอร์มหรือติดต่อโดยตรงได้เลย ครู Max จะตอบกลับภายใน 24 ชั่วโมง</p>
+        <div class="contact-chips">
+          <div class="contact-chip">
+            <div class="chip-icon">💬</div>
+            <div><div class="chip-label">Line Official</div><div class="chip-val">@deltamax</div></div>
+          </div>
+          <div class="contact-chip">
+            <div class="chip-icon">📱</div>
+            <div><div class="chip-label">TikTok / Instagram</div><div class="chip-val">@deltamax.th</div></div>
+          </div>
+          <div class="contact-chip">
+            <div class="chip-icon">▶️</div>
+            <div><div class="chip-label">YouTube</div><div class="chip-val">Delta Max</div></div>
+          </div>
+          <div class="contact-chip">
+            <div class="chip-icon">📧</div>
+            <div><div class="chip-label">Facebook</div><div class="chip-val">Delta Max</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="booking-form reveal">
+        <div id="form-area">
+          <div class="form-title">จองคาบเรียน</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>ชื่อนักเรียน *</label>
+              <input type="text" id="cf-name" placeholder="ชื่อ-นามสกุล">
+            </div>
+            <div class="form-group">
+              <label>ระดับชั้น *</label>
+              <select id="cf-grade">
+                <option value="">-- เลือก --</option>
+                <option>ม.4</option><option>ม.5</option><option>ม.6</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Line ID / เบอร์โทร *</label>
+            <input type="text" id="cf-contact" placeholder="Line ID หรือ 0812345678">
+          </div>
+          <div class="form-group">
+            <label>วิชาที่สนใจ</label>
+            <select id="cf-subject">
+              <option>คณิตศาสตร์ (Math)</option>
+              <option>ฟิสิกส์ (Physics)</option>
+              <option>ทั้งสองวิชา</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>แพ็กเกจที่สนใจ</label>
+            <select id="cf-pkg">
+              <option>ทดลองเรียนฟรี 1 ชม.</option>
+              <option>1-on-1 รายครั้ง (700฿/ชม.)</option>
+              <option>แพ็กเกจรายเดือน (5,500฿)</option>
+              <option>กลุ่มเล็ก (280฿/คน/ชม.)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ข้อความเพิ่มเติม</label>
+            <textarea id="cf-msg" placeholder="เช่น วันเวลาที่สะดวก เรื่องที่อยากเน้น..."></textarea>
+          </div>
+          <button class="form-submit" onclick="submitContactForm()">ส่งคำขอจอง</button>
+          <div class="form-note">ครู Max จะติดต่อกลับภายใน 24 ชั่วโมง ✓ ฟรี ไม่มีข้อผูกมัด</div>
+        </div>
+        <div class="form-success" id="form-success">
+          <div class="success-icon">🎉</div>
+          <div class="success-title">ส่งเรียบร้อยแล้ว!</div>
+          <div class="success-sub">ขอบคุณมากนะครับ ครู Max จะติดต่อกลับภายใน 24 ชั่วโมงผ่าน Line หรือเบอร์โทรที่ให้ไว้</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo"><span>Δ</span> Delta Max</div>
+  <div class="footer-sub">เปลี่ยนทุกแต้ม สู่คะแนนสูงสุด · Math & Physics ม.ปลาย</div>
+  <div class="footer-links">
+    <a href="#about">เกี่ยวกับเรา</a>
+    <a href="#why">ทำไมต้องเรา</a>
+    <a href="#packages">แพ็กเกจ</a>
+    <a href="#reviews">รีวิว</a>
+    <a href="#contact">ติดต่อ</a>
+  </div>
+  <div class="footer-copy">© 2026 Delta Max · ครู Max · สงวนลิขสิทธิ์</div>
+</footer>
+
+<script>
+function submitContactForm() {
+  const name = document.getElementById('cf-name').value.trim();
+  const contact = document.getElementById('cf-contact').value.trim();
+  const grade = document.getElementById('cf-grade').value;
+  if (!name) { alert('กรุณากรอกชื่อนักเรียน'); return; }
+  if (!contact) { alert('กรุณากรอก Line ID หรือเบอร์โทร'); return; }
+  if (!grade) { alert('กรุณาเลือกระดับชั้น'); return; }
+  document.getElementById('form-area').style.display = 'none';
+  document.getElementById('form-success').classList.add('show');
+}
+
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.12 });
+reveals.forEach(r => observer.observe(r));
+
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').style.boxShadow = window.scrollY > 20 ? '0 4px 30px rgba(0,0,0,0.4)' : 'none';
+});
+</script>
+</body>
+</html>
